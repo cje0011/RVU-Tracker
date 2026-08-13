@@ -329,7 +329,25 @@ def delete_entry(item_id):
     # Recalculate the running total from the remaining items
     st.session_state.running_total = sum(item[4] for item in st.session_state.history)
 
-st.title("Code Point Tracker")
+# Use columns to place the title on the left and the Details button on the right
+col1, col2 = st.columns([5, 1])
+
+with col1:
+    st.title("Code Point Tracker")
+
+with col2:
+    # Add some vertical space to align the button with the title text
+    st.write("") 
+    st.write("")
+    # Create a popover button that reveals the instructions when clicked
+    with st.popover("ℹ️ Details"):
+        st.markdown("""
+        **How to use this program:**
+        
+        * **Typing codes:** Type a valid procedure code into the box (e.g., `D0140`) and press Enter to calculate its value and add it to your total.
+        * **Adding quantities:** To add multiple of the same code at once, type the code, type a space, and then type the quantity (e.g., `D0120 5`). 
+        * **Fixing mistakes:** If you enter the wrong code, scroll down to the Entry History and click the red **❌** next to the item to delete it and automatically deduct the points from your total.
+        """)
 
 # Create a form so the user can press Enter to submit
 with st.form(key='code_entry_form', clear_on_submit=True):
@@ -391,14 +409,14 @@ if st.session_state.history:
     # Iterate through the history in reverse order
     for item_id, code, q, desc, pts in reversed(st.session_state.history):
         # Create two columns: a wide one for text, a narrow one for the button
-        col1, col2 = st.columns([9, 1])
+        log_col1, log_col2 = st.columns([9, 1])
         
-        with col1:
+        with log_col1:
             if q > 1:
                 st.write(f"- **{code}** (x{q}): {desc} ({pts} points)")
             else:
                 st.write(f"- **{code}**: {desc} ({pts} points)")
                 
-        with col2:
+        with log_col2:
             # When clicked, this button triggers the delete_entry function
             st.button("❌", key=f"del_{item_id}", on_click=delete_entry, args=(item_id,))
