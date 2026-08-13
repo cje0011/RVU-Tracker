@@ -349,6 +349,28 @@ with col2:
         * **Fixing mistakes:** If you enter the wrong code, scroll down to the Entry History and click the red **❌** next to the item to delete it and automatically deduct the points from your total.
         """)
 
+# Determine patient status and input box border color based on the running total
+current_total = st.session_state.running_total
+patient_status = ""
+border_color = ""
+
+if current_total > 150:
+    patient_status = "Major Patient"
+    border_color = "gold"
+elif current_total > 75:
+    patient_status = "Minor Patient"
+    border_color = "silver"
+
+# Inject custom CSS to change the outline color of the input box if a threshold is met
+if border_color:
+    st.markdown(f"""
+        <style>
+        div[data-testid="stTextInput"] div[data-baseweb="input"] {{
+            border: 2px solid {border_color} !important;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
 # Create a form so the user can press Enter to submit
 with st.form(key='code_entry_form', clear_on_submit=True):
     user_code = st.text_input("Enter a code:")
@@ -391,15 +413,17 @@ if submit_button and user_code:
                     total_points
                 ))
                 
-                if qty > 1:
-                    st.success(f"Success! Added {qty}x {clean_code} - {description} ({total_points} total points).")
-                else:
-                    st.success(f"Success! {clean_code} - {description} is worth {total_points} points.")
+                # We use st.rerun() so the UI (like the border color and total) updates instantly
+                st.rerun()
             else:
                 st.error(f"Code '{clean_code}' not found in the master list.")
 
 # Display the running total prominently
 st.metric(label="Total Points", value=st.session_state.running_total)
+
+# Display the patient status below the total if a threshold has been reached
+if patient_status:
+    st.subheader(patient_status)
 
 # Display the log of what has been entered
 if st.session_state.history:
