@@ -314,25 +314,32 @@ master_codes = {
     "T1013": {"points": 0, "desc": "Interpretation Service Sign Language"}
 }
 
-# Initialize session state to remember the running total and history
+# Initialize session state variables
 if 'running_total' not in st.session_state:
     st.session_state.running_total = 0
 if 'history' not in st.session_state:
     st.session_state.history = []
+if 'entry_counter' not in st.session_state:
+    st.session_state.entry_counter = 0
+
+# Define a function to handle deleting an entry
+def delete_entry(item_id):
+    # Filter out the item that matches the unique ID
+    st.session_state.history = [item for item in st.session_state.history if item[0] != item_id]
+    # Recalculate the running total from the remaining items
+    st.session_state.running_total = sum(item[4] for item in st.session_state.history)
 
 st.title("Code Point Tracker")
 
-# Create a form so the user can just press Enter to submit
+# Create a form so the user can press Enter to submit
 with st.form(key='code_entry_form', clear_on_submit=True):
     user_code = st.text_input("Enter a code:")
     submit_button = st.form_submit_button("Submit")
 
 # Process the code when submitted
 if submit_button and user_code:
-    # Split the input into parts based on spaces
     parts = user_code.strip().upper().split()
     
-    # Catch inputs that have too many spaces
     if len(parts) > 2:
         st.error("Format not recognized. Please use 'CODE' or 'CODE QUANTITY'.")
     else:
@@ -340,7 +347,6 @@ if submit_button and user_code:
         qty_is_valid = True
         qty = 1
         
-        # Check if a quantity was provided after a space
         if len(parts) == 2:
             try:
                 qty = int(parts[1])
@@ -348,23 +354,25 @@ if submit_button and user_code:
                 st.error("Please enter a valid number for the quantity (e.g., 'D0140 3').")
                 qty_is_valid = False
         
-        # Proceed if the quantity is a valid number
         if qty_is_valid:
             if clean_code in master_codes:
-                # Look up the points and description from the dictionary
                 base_points = master_codes[clean_code]["points"]
                 description = master_codes[clean_code]["desc"]
-                
-                # Calculate total points for this entry
                 total_points = base_points * qty
                 
-                # Add to the running total
+                # Update total and counter
                 st.session_state.running_total += total_points
+                st.session_state.entry_counter += 1
                 
-                # Add to history
-                st.session_state.history.append((clean_code, qty, description, total_points))
+                # Add to history with a unique ID at the beginning of the tuple
+                st.session_state.history.append((
+                    st.session_state.entry_counter, 
+                    clean_code, 
+                    qty, 
+                    description, 
+                    total_points
+                ))
                 
-                # Display the success message
                 if qty > 1:
                     st.success(f"Success! Added {qty}x {clean_code} - {description} ({total_points} total points).")
                 else:
@@ -375,12 +383,22 @@ if submit_button and user_code:
 # Display the running total prominently
 st.metric(label="Total Points", value=st.session_state.running_total)
 
-# Display a log of what has been entered so far
+# Display the log of what has been entered
 if st.session_state.history:
     st.write("---")
     st.subheader("Entry History")
-    for code, q, desc, pts in reversed(st.session_state.history):
-        if q > 1:
-            st.write(f"- **{code}** (x{q}): {desc} ({pts} points)")
-        else:
-            st.write(f"- **{code}**: {desc} ({pts} points)")
+    
+    # Iterate through the history in reverse order
+    for item_id, code, q, desc, pts in reversed(st.session_state.history):
+        # Create two columns: a wide one for text, a narrow one for the button
+        col1, col2 = st.columns([9, 1])
+        
+        with col1:
+            if q > 1:
+                st.write(f"- **{code}** (x{q}): {desc} ({pts} points)")
+            else:
+                st.write(f"- **{code}**: {desc} ({pts} points)")
+                
+        with col2:
+            # When clicked, this button triggers the delete_entry function
+            st.button("❌", key=f"del_{item_id}", on_click=delete_entry, args=(item_id,))
