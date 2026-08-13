@@ -329,24 +329,48 @@ with st.form(key='code_entry_form', clear_on_submit=True):
 
 # Process the code when submitted
 if submit_button and user_code:
-    # Clean up the input to match the master list 
-    clean_code = user_code.strip().upper()
+    # Split the input into parts based on spaces
+    parts = user_code.strip().upper().split()
     
-    if clean_code in master_codes:
-        # Look up the points and description from the dictionary
-        points = master_codes[clean_code]["points"]
-        description = master_codes[clean_code]["desc"]
-        
-        # Add to the total
-        st.session_state.running_total += points
-        
-        # Add to history, now including the description
-        st.session_state.history.append((clean_code, points, description))
-        
-        # Display the success message with the description
-        st.success(f"Success! {clean_code} - {description} is worth {points} points.")
+    # Catch inputs that have too many spaces
+    if len(parts) > 2:
+        st.error("Format not recognized. Please use 'CODE' or 'CODE QUANTITY'.")
     else:
-        st.error(f"Code '{user_code}' not found in the master list.")
+        clean_code = parts[0]
+        qty_is_valid = True
+        qty = 1
+        
+        # Check if a quantity was provided after a space
+        if len(parts) == 2:
+            try:
+                qty = int(parts[1])
+            except ValueError:
+                st.error("Please enter a valid number for the quantity (e.g., 'D0140 3').")
+                qty_is_valid = False
+        
+        # Proceed if the quantity is a valid number
+        if qty_is_valid:
+            if clean_code in master_codes:
+                # Look up the points and description from the dictionary
+                base_points = master_codes[clean_code]["points"]
+                description = master_codes[clean_code]["desc"]
+                
+                # Calculate total points for this entry
+                total_points = base_points * qty
+                
+                # Add to the running total
+                st.session_state.running_total += total_points
+                
+                # Add to history
+                st.session_state.history.append((clean_code, qty, description, total_points))
+                
+                # Display the success message
+                if qty > 1:
+                    st.success(f"Success! Added {qty}x {clean_code} - {description} ({total_points} total points).")
+                else:
+                    st.success(f"Success! {clean_code} - {description} is worth {total_points} points.")
+            else:
+                st.error(f"Code '{clean_code}' not found in the master list.")
 
 # Display the running total prominently
 st.metric(label="Total Points", value=st.session_state.running_total)
@@ -355,5 +379,8 @@ st.metric(label="Total Points", value=st.session_state.running_total)
 if st.session_state.history:
     st.write("---")
     st.subheader("Entry History")
-    for code, pts, desc in reversed(st.session_state.history):
-        st.write(f"- **{code}**: {desc} ({pts} points)")
+    for code, q, desc, pts in reversed(st.session_state.history):
+        if q > 1:
+            st.write(f"- **{code}** (x{q}): {desc} ({pts} points)")
+        else:
+            st.write(f"- **{code}**: {desc} ({pts} points)")
