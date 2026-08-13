@@ -361,12 +361,16 @@ elif current_total > 75:
     patient_status = "Minor Patient"
     border_color = "silver"
 
-# Inject custom CSS to change the outline color of the input box if a threshold is met
+# Inject custom CSS to aggressively change the outline color of the input box
 if border_color:
     st.markdown(f"""
         <style>
+        div[data-testid="stTextInput"] div[data-baseweb="base-input"],
         div[data-testid="stTextInput"] div[data-baseweb="input"] {{
-            border: 2px solid {border_color} !important;
+            border-color: {border_color} !important;
+            border-width: 2px !important;
+            border-style: solid !important;
+            box-shadow: 0 0 8px {border_color} !important;
         }}
         </style>
     """, unsafe_allow_html=True)
@@ -444,3 +448,6 @@ if st.session_state.history:
         with log_col2:
             # When clicked, this button triggers the delete_entry function
             st.button("❌", key=f"del_{item_id}", on_click=delete_entry, args=(item_id,))
+            
+            
+            
